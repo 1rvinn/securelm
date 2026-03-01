@@ -1,0 +1,19 @@
+# GPU (remote Linux A100 40GB) environment — Stage 2 serving, Stage 4 training,
+# Stage 5 generation. Do NOT install these on the Windows dev box (bitsandbytes
+# / vLLM have no usable Windows build). Pins verified mutually compatible
+# (mid-2026). Match the torch CUDA build to the box's driver.
+#
+#   pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cu124
+#   pip install -r requirements-gpu.txt
+
+transformers==5.13.0
+trl==1.7.1
+peft==0.19.1
+accelerate==1.14.0
+datasets==5.0.0
+bitsandbytes==0.49.2
+# vLLM for the Stage 2 inference server (pin at install time to the current
+# release available on the box):
+vllm
+# Stage 5 capability eval:
+lm-eval>=0.4.5

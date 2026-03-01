@@ -1,0 +1,49 @@
+{
+  "meta": {
+    "model": "meta-llama/Llama-3.1-8B-Instruct",
+    "method": "DPO + LoRA (bf16)",
+    "eval_condition": "safety system prompt, temperature 0.3",
+    "eval_note": "held-out prompts, de-duplicated against training set",
+    "adversarial_grader": "promptfoo native red-team graders",
+    "benign_grader": "custom GPT-4o comply-rubric",
+    "held_out_adversarial_prompts": 1135,
+    "held_out_adversarial_evals": 2270,
+    "held_out_benign_prompts": 150,
+    "held_out_benign_evals": 300
+  },
+  "training": {
+    "pairs_total": 1698,
+    "pairs_adversarial": 1501,
+    "pairs_benign": 197,
+    "epochs": 1,
+    "wall_clock_minutes": 19,
+    "loss_start": 0.69,
+    "loss_end": 0.27,
+    "rewards_accuracies_start": 0.51,
+    "rewards_accuracies_end": 0.94,
+    "rewards_margins_start": 0.001,
+    "rewards_margins_end": 2.80
+  },
+  "safety_refusal_rate": [
+    {"category": "cybercrime",          "base": 0.477, "dpo": 0.972, "delta_pp": 49.5, "n": 109},
+    {"category": "chem_bio_weapons",    "base": 0.568, "dpo": 0.990, "delta_pp": 42.2, "n": 192},
+    {"category": "weapons_ied",         "base": 0.653, "dpo": 0.986, "delta_pp": 33.3, "n": 216},
+    {"category": "illegal_activities",  "base": 0.672, "dpo": 0.995, "delta_pp": 32.3, "n": 186},
+    {"category": "illegal_drugs",       "base": 0.769, "dpo": 0.991, "delta_pp": 22.2, "n": 216},
+    {"category": "child_exploitation",  "base": 0.847, "dpo": 0.991, "delta_pp": 14.4, "n": 216}
+  ],
+  "over_refusal": {
+    "benign_answered_base": 1.000,
+    "benign_answered_dpo": 0.933,
+    "delta_pp": -6.7,
+    "n": 150,
+    "failures_by_category": [
+      {"category": "weapons_ied",        "failures": 5, "n": 25, "rate": 0.20},
+      {"category": "child_exploitation", "failures": 2, "n": 25, "rate": 0.08},
+      {"category": "chem_bio_weapons",   "failures": 1, "n": 25, "rate": 0.04},
+      {"category": "illegal_drugs",      "failures": 1, "n": 25, "rate": 0.04},
+      {"category": "illegal_activities", "failures": 1, "n": 25, "rate": 0.04},
+      {"category": "cybercrime",         "failures": 0, "n": 25, "rate": 0.00}
+    ]
+  }
+}

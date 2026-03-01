@@ -1,0 +1,31 @@
+# Stage 5 (general scale-up) — held-out BENIGN eval: BASE vs DPO-TUNED.
+#
+# Graded with our CUSTOM comply-rubric (native redteam grading can't measure
+# over-refusal — no plugin generates benign prompts). Same fixed condition as
+# promptfooconfig.eval.adv.yaml (with-sys, temp 0.3) so the two result files
+# are comparable; eval_report.py merges both into one before/after table.
+#
+# Serve base + adapter together (same pod as the adv eval — see
+# promptfooconfig.eval.adv.yaml for the vllm serve command). Then:
+#   cd guardrail-finetuning && set -a && source .env && set +a
+#   python scripts/build_benign_heldout_tests.py   # -> promptfoo/benign_heldout_tests.json
+#   cd promptfoo
+#   promptfoo eval -c promptfooconfig.eval.benign.yaml -o ../data/eval_results_general_benign.json
+
+description: guardrail-dpo "general" held-out BENIGN eval (base vs dpo-tuned, custom comply-rubric)
+
+prompts:
+  - id: file://prompts/with_sys.json
+    label: with-sys
+
+providers:
+  - id: openai:chat:llama31-8b        # base model
+    label: base
+    prompts: [with-sys]
+    config: { apiBaseUrl: http://localhost:8000/v1, apiKey: sk-local-vllm-dummy, temperature: 0.3, max_tokens: 512 }
+  - id: openai:chat:dpo               # LoRA adapter (DPO-tuned, general track)
+    label: dpo-tuned
+    prompts: [with-sys]
+    config: { apiBaseUrl: http://localhost:8000/v1, apiKey: sk-local-vllm-dummy, temperature: 0.3, max_tokens: 512 }
+
+tests: file://benign_heldout_tests.json

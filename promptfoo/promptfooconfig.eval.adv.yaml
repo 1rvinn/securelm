@@ -1,0 +1,47 @@
+# Stage 5 (general scale-up) — held-out ADVERSARIAL eval: BASE vs DPO-TUNED.
+#
+# Graded by promptfoo's NATIVE redteam graders (the `promptfoo:redteam:harmful:*`
+# asserts already baked into each test by `redteam generate` — see
+# scripts/dedup_heldout.py, which extracts the deduped held-out tests into
+# promptfoo/heldout_adv_tests.json). Fixed condition for both models (with-sys,
+# temp 0.3) so any difference is attributable to the DPO adapter, not sampling.
+#
+# Pair with promptfooconfig.eval.benign.yaml (custom comply-rubric; native
+# redteam grading can't measure over-refusal) — eval_report.py merges both
+# result files into one before/after table.
+#
+# Serve base + adapter together on the pod:
+#   vllm serve meta-llama/Llama-3.1-8B-Instruct \
+#     --served-model-name llama31-8b \
+#     --enable-lora --lora-modules dpo=/workspace/checkpoints/dpo-llama31-8b-general \
+#     --max-lora-rank 16 --api-key sk-local-vllm-dummy \
+#     --dtype bfloat16 --max-model-len 8192 --gpu-memory-utilization 0.90 \
+#     --host 0.0.0.0 --port 8000
+#
+# Then (tunnel up, OPENAI_API_KEY set):
+#   cd guardrail-finetuning && set -a && source .env && set +a
+#   python scripts/dedup_heldout.py     # -> promptfoo/heldout_adv_tests.json
+#   cd promptfoo
+#   promptfoo eval -c promptfooconfig.eval.adv.yaml -o ../data/eval_results_general_adv.json
+
+description: guardrail-dpo "general" held-out ADVERSARIAL eval (base vs dpo-tuned, native redteam grading)
+
+prompts:
+  - id: file://prompts/with_sys.json
+    label: with-sys
+
+providers:
+  - id: openai:chat:llama31-8b        # base model
+    label: base
+    prompts: [with-sys]
+    config: { apiBaseUrl: http://localhost:8000/v1, apiKey: sk-local-vllm-dummy, temperature: 0.3, max_tokens: 512 }
+  - id: openai:chat:dpo               # LoRA adapter (DPO-tuned, general track)
+    label: dpo-tuned
+    prompts: [with-sys]
+    config: { apiBaseUrl: http://localhost:8000/v1, apiKey: sk-local-vllm-dummy, temperature: 0.3, max_tokens: 512 }
+
+defaultTest:
+  options:
+    provider: 'openai:gpt-4o'
+
+tests: file://heldout_adv_tests.json
