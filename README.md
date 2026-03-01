@@ -5,7 +5,7 @@
 
 ---
 
-### stage 1: the pilot
+### iter 1: the pilot
 
 - model used: meta-llama/Llama-3.1-8B-Instruct
 - guardrail categories: harmful instruction refusal (weapons/malware/fraud), PII protection, and jailbreak resistance
