@@ -240,23 +240,17 @@ pipeline:
             
             - can also be expressed as sigmoid of delta reward:
                 
-                $$
-                \sigma(r(x,y_c) - r(x,y_r))
-                $$
+                $$\sigma(r(x,y_c) - r(x,y_r))$$
                 
         - we need to maximise this probability → ideally to 1. therefore we use cross entropy loss: -(y_actual)log(y_pred)
         - therefore:
             
-            $$
-            L(\theta, \theta_{ref})= -log(\sigma[r(x,y_c)-r(x,y_r)])
-            $$
+            $$L(\theta, \theta_{ref})= -log(\sigma[r(x,y_c)-r(x,y_r)])$$
             
             - here, $\theta$ is policy parameters, $\theta_{ref}$ is reference parameters
         - now for the rewards:
             
-            $$
-            r(x,y) = \beta log\frac{\pi_{\theta}(y|x)}{\pi_{\theta_{ref}}(y|x)}
-            $$
+            $$r(x,y) = \beta log\frac{\pi_{\theta}(y|x)}{\pi_{\theta_{ref}}(y|x)}$$
             
             - $\beta$ is KL divergence coefficient
             - this calculates how much more likely the policy model is to give y as the response given x compared to the reference model
