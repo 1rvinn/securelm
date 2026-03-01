@@ -231,12 +231,12 @@ pipeline:
 - 4. dpo training
     - give only the prompt, chosen, rejected part of the dataset to the model
         
-        ![image.png](securelm/image.png)
+        ![image.png](assets/image.png)
         
     - theory (**imp)
         - P(chosing chosen over rejected) → softmax of rewards:
             
-            ![image.png](securelm/image%201.png)
+            ![image.png](assets/image%201.png)
             
             - can also be expressed as sigmoid of delta reward:
                 
@@ -264,15 +264,15 @@ pipeline:
             - the probability of giving y response given x prompt
             - for single token outputs:
                 
-                ![image.png](securelm/image%202.png)
+                ![image.png](assets/image%202.png)
                 
             - for multitoken outputs:
                 
-                ![image.png](securelm/image%203.png)
+                ![image.png](assets/image%203.png)
                 
         - therefore:
             
-            ![image.png](securelm/image%204.png)
+            ![image.png](assets/image%204.png)
             
         - to reduce loss, we must have a high chosen reward and a low rejected reward. ie, $\pi_{\theta}(y_c|x)$ must be high (higher than $\pi_{\theta_{ref}}(y_c|x)$) [implies that the policy model is much more likely to give the chosen response than the reference model] and $\pi_{\theta}(y_r|x)$ must be low (lower than $\pi_{\theta_{ref}}(y_r|x)$) [implies that the policy model is much less likely to give the rejected response than the reference model]
         
@@ -393,7 +393,7 @@ reference chats and websites:
 2. https://chatgpt.com/share/6a562723-fa38-83ee-8239-add19f016a48
 3. claude chat:
     
-    [2026-07-14-174108-local-command-caveatcaveat-the-messages-below.txt](securelm/2026-07-14-174108-local-command-caveatcaveat-the-messages-below.txt)
+    [2026-07-14-174108-local-command-caveatcaveat-the-messages-below.txt](assets/2026-07-14-174108-local-command-caveatcaveat-the-messages-below.txt)
     
 
 ---
