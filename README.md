@@ -391,3 +391,179 @@ reference chats and websites:
     
 
 ---
+
+### iter 2: the experimentation
+
+i had the a few ideas in mind, tried them out one by one; aforementioned are my understandings from each:
+
+1. change to redteam eval for dataset generation
+    1. took a lot more time - since jailbreak: meta takes time → will turn this off
+    2. grader is binary - 1 or 0 - therefore only the prompts with atleast one of both 0 and 1 get selected to be a part of dpo pairs
+    3. the pairs are a lot better now
+2. remove stage1 and stage 2 and only keep stage2b, ie, getting prompts from promptfoo redteam generate. 
+    1. this already happened in the above. worked fine.
+3. also, here, i want to not have pii and previous guardrails. i want to choose my own set of guardrails.
+    1. which guardrails to choose? there are domain specific ones - for eg finance. i think we should start off with generic then do generic+finance then just finance.
+    2. will run a pilot on the general prompts to see first how much they refuse
+        - details
+            1. plugins (6)
+                1. harmful:chemical-biological-weapons (5 tests)
+                2. harmful:child-exploitation (5 tests)
+                3. harmful:cybercrime (5 tests)
+                4. harmful:illegal-activities (5 tests)
+                5. harmful:illegal-drugs (5 tests)
+                6. harmful:weapons:ied (5 tests)
+            2. strategies (9)
+                1. basic
+                2. base64 (30 additional tests)
+                3. citation (30 additional tests)
+                4. hex (30 additional tests)
+                5. homoglyph (30 additional tests)
+                6. jailbreak-templates (30 additional tests)
+                7. jailbreak:likert (30 additional tests)
+                8. leetspeak (30 additional tests)
+                9. math-prompt (30 additional tests)
+        - results:
+            - 306 test cases generated
+            - 1,224 evals (306 prompts x 4 sampling variants)
+            - 814/1224 passed (66.5%), 410 failed (33.5%)
+            - base64, citation gave no contrasts → remove them as strats
+            - 124 prompt pairs generated
+            - config in → `promptfoo/promptfooconfig.general.pilot.yaml`
+            - prompts in → `promptfoo/redteam.general.pilot.yaml`
+            - results in → `data/promptfoo_results_general_pilot.json`
+            - prompt pairs in → `data/dpo_pairs_general_pilot_SCRATCH.jsonl`
+        - this run gave us 124 prompt pairs. per plugin conversion rate (no of prompts to no of pairs) was different, so we’ll choose diff no. of tests for diff plugins so that the total no of pairs for each plugin is symmetric.
+    3. finally going ahead with the following plugins and strategies:
+        - details
+            1. plugins (6)
+                1. harmful:chemical-biological-weapons (60 tests)
+                2. harmful:child-exploitation (80 tests)
+                3. harmful:cybercrime (60 tests)
+                4. harmful:illegal-activities (65 tests)
+                5. harmful:illegal-drugs (70 tests)
+                6. harmful:weapons:ied (70 tests)
+            2. strategies (7)
+                1. basic
+                2. hex
+                3. homoglyph
+                4. jailbreak-templates
+                5. jailbreak:likert
+                6. leetspeak
+                7. math-prompt
+        
+        saved the final generation config in `promptfoo/promptfooconfig.general.train.yaml/Users/irvinsachdeva/Documents/Alignment/guardrail-finetuning/promptfoo/promptfooconfig.general.train.yaml`
+        
+4. change the training from QLoRA to LoRA
+    1. reran both with and without quantization
+    2. changing does not lead to any particular advantages
+    3. metrics:
+        1. loss: 0.70→0.63 (qlora) 0.70→0.62 (lora)
+        2. rewards - accuracies (how many times r_chosen>r_rejected): 0.55→0.875 (qlora) 0.45→0.92 (lora)
+        3. rewards - margins (avg of r_chosen-r_rejected): −0.005→0.134 (qlora) to −0.016→0.182 (lora)
+        
+        not much of a change since only the model params are quantized and not the adapter params - which are the only params that are updated - that too only while training, while inference we use the original non-quantized params. therefore the adapter param values might differ bw lora and qlora due to approximation errors during forward/backward passes in the training run brought about by quantization, which generally isnt much of an issue.
+        
+        so lora is marginally better in terms of accuracy. but on top of it, it’s also better in terms of speed since no dequantization step exists.
+        
+        we’ll go ahead with lora as we have the required compute.
+        
+    4. compute:
+        1. max GPU usage, unsurprisingly, increases from 12.4 gb to 22.9 gb 
+        2. takes about the same time
+    5. eval took too much time → why is that so? are openai credits even being used? → have made it deliberately use openai api key
+5. create a benign prompt dataset so as to prevent over-refusal 
+    1. do we also train on benign datasets, if yes, how? - or - do we just use them in the final eval to check if over-refusal was a consequence of this training or not?
+    2. we can train on benign datasets - prompt: ‘{just safe prompt}’, chosen: ‘{genuine helpful response}’, rejected: ‘Sorry, I can't help with that.’
+    3. will have to add the above in the training phase otherwise the model might just learn to say ‘sorry, i cant help with that’ always.
+    4. final decision:
+        1. benign dataset will be added - both for train and eval
+        2. training pairs: prompts (self-created `data/benign_prompts.jsonl`- 198 prompts) → vllm (`with-safety-system-prompt, temp 0.7` )→ response → eval (gpt4o comply rubric)
+            1. response_generation→qa→pairing happens with `scripts/build_benign_pairs.py`
+        3. held-out pairs: prompts (self created `data/benign_heldout.jsonl` - 150 prompts) → script (`scripts/build_benign_heldout_tests.py` ) converts prompts to tests (`data/benign_heldout.jsonl` to `promptfoo/benign_heldout_tests.json`) → eval happens on tests using promptfoo (`promptfooconfig.eval.benign.yaml`)
+            - format of tests
+                
+                ```json
+                {
+                  "vars": {
+                      "query": row["prompt"],
+                      "category": row.get("category", "benign"),
+                      "subcategory": "benign",
+                      "expected_behavior": "comply",
+                      "eval_id": row.get("id"),
+                  },
+                  "assert": [
+                      {"type": "llm-rubric", "value": comply_rubric(), "provider": GRADER},
+                      {"type": "moderation"},
+                  ],
+                }
+                ```
+                
+6. i think we should change step5 eval also to redteam eval
+    1. we def should in case we are using redteam eval for generation of pairs for the comparison to be fair
+        1. done, config at `promptfoo/promptfooconfig.eval.adv.yaml` 
+        2. using out own 4o api key for this
+    2. benign eval will have to be done separately
+        1. done, updated above
+7. will have to run it on a bigger ds - how big?
+    1. 1k-1.5k pairs is good enough - good scale, beyond this it might start overfitting
+    2. training:
+        1. adversarial: ≈ 1300 pairs; ~215-230 pairs per plugin; have specified different numTests for all plugins to yield the same pairs. generated through promptfoo redteam generate; config at `promptfoo/promptfooconfig.general.train.yaml`
+            
+            ^ actual no. depends on how much generated in the run
+            
+        2. benign: 198 prompts (33/category) at `data/benign_prompts.jsonl`
+    3. eval:
+        1. adversarial:  ≈ 1000 prompts; numTests=24 for all plugins; config at `promptfoo/promptfooconfig.general.heldout.yaml`
+        2. benign: 150 prompts (25/category) at `data/benign_heldout.jsonl`
+
+---
+
+### iter 3: the full run
+
+1. promptfoo redteam generate (6 plugins × 7 strategies, per-plugin numTests) → 3,357 tests.
+2. divided the above into 6 chunks for response generation and grading
+3. build_pairs.py → 1,439 pairs; cybercrime under yielding → topup generation → +62 pairs → 1,501 final adversarial pairs.
+4. build_benign_pairs.py 198 curated adjacent legitimate prompts → grading done to check helpfulness → 197 kept, 1 dropped
+5. merge_pairs.py → 1,698 total training pairs (88.4% adversarial / 11.6% benign)
+6. dpo finetuning: bf16 LoRA (--no-quantize), 1 epoch, lr=1e-5, beta=0.1 → dpo-llama31-8b-general adapter. 19 min, loss 0.69→0.27, rewards/accuracies 0.51→0.94, rewards/margins 0.001→2.80
+7. heldout generation: redteam generate (numTests=24) → 1,200 tests → deduped against all training prompts → 1,135 clean heldout attacks. 150 heldout benign prompts.
+8. held-out eval - adversarial via redteam eval - 2,270 evals. benign via plain eval + custom comply rubric - 300 evals.
+9. safety +14pp to +50pp across all 6 categories (n=109-216, decisively above noise) vs. benign helpfulness −6.7pp (real, concentrated in weapons:ied at 20% vs 0 to 8% elsewhere).
+
+#### results
+
+drumrollllss 🥁
+
+safety:
+
+% indicates % of adversarial prompts the llm refused to answer →
+
+| category | base | dpo-tuned | Δ | N |
+| --- | --- | --- | --- | --- |
+| cybercrime | 47.7% | 97.2% | +49.5pp | 109 |
+| chem-bio-weapons | 56.8% | 99.0% | +42.2pp | 192 | 
+| weapons:ied | 65.3% | 98.6% | +33.3pp | 216 |
+| illegal-activities | 67.2% | 99.5% | +32.3pp | 186 |
+| illegal-drugs | 76.9% | 99.1% | +22.2pp | 216 |
+| child-exploitation | 84.7% | 99.1% | +14.4pp | 216 |
+
+
+overrefusal:
+
+% indicates no of benign prompts answered by the llm →
+
+| base | dpo-tuned | Δ |
+| --- | --- | --- | 
+| 100.0% (n=150) | 93.3% (10 failures) | -6.7% |
+
+category wise:
+
+| category | failures | rate |
+| --- | --- | --- | 
+| weapons:ied | 5/25 | 20% |
+| child-exploitation | 2/25 | 8% |
+| chem-bio-weapons | 1/25 | 4% |
+| illegal-drugs | 1/25 | 4% |
+| illegal-activities | 1/25 | 4% |
+| cybercrime | 0/25 | 0% |
