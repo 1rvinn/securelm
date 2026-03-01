@@ -11,6 +11,8 @@ Held out from training, the tuned adapter refuses **+14 to +50 percentage points
 more adversarial attacks across six harm categories, at a measured, honestly
 reported cost of **−6.7pp** on benign helpfulness.
 
+**🤗 Adapter:** [`1rvinn/dpo-llama31-8b-general`](https://huggingface.co/1rvinn/dpo-llama31-8b-general) · **📄 Write-up:** [`docs/`](docs/) · **🗂️ Data:** [`DATA.md`](DATA.md)
+
 > This repo is a research write-up. `README.md` is the summary; [`docs/`](docs/)
 > holds the methodology, DPO derivation, and the full experimental journey;
 > [`my_notes.md`](my_notes.md) is the raw lab notebook the project was built from.
@@ -186,16 +188,26 @@ notes are in [`promptfoo/README.md`](promptfoo/README.md).
 
 ### Trained adapter
 
-The LoRA adapter will be published on the Hugging Face Hub at
-**`1rvinn/dpo-llama31-8b-general`** *(upload pending)*. Once available:
+The LoRA adapter is on the Hugging Face Hub:
+**[`1rvinn/dpo-llama31-8b-general`](https://huggingface.co/1rvinn/dpo-llama31-8b-general)**.
+Serve it on top of the base model (no merge needed):
 
 ```bash
 vllm serve meta-llama/Llama-3.1-8B-Instruct --served-model-name llama31-8b \
   --enable-lora --lora-modules dpo=1rvinn/dpo-llama31-8b-general --max-lora-rank 16
 ```
 
-Until then the adapter is fully reproducible from the included data + `train_dpo.py`
-(step 5 above; ~19 min on one A100).
+Or load it with PEFT:
+
+```python
+from transformers import AutoModelForCausalLM
+from peft import PeftModel
+base = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-3.1-8B-Instruct")
+model = PeftModel.from_pretrained(base, "1rvinn/dpo-llama31-8b-general")
+```
+
+It is also fully reproducible from the included data + `train_dpo.py` (step 5
+above; ~19 min on one A100).
 
 ---
 
