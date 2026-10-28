@@ -11,7 +11,9 @@ Held out from training, the tuned adapter refuses **+14 to +50 percentage points
 more adversarial attacks across six harm categories, at a measured, honestly
 reported cost of **−6.7pp** on benign helpfulness.
 
-**🤗 Adapter:** [`1rvinn/securelm`](https://huggingface.co/1rvinn/securelm) · **📄 Write-up:** [`docs/`](docs/) · **🗂️ Data:** [`DATA.md`](DATA.md)
+**🤗 Adapter:** [`1rvinn/llama-securelm`](https://huggingface.co/1rvinn/llama-securelm) · **📄 Write-up:** [`docs/`](docs/) · **🗂️ Data:** [`DATA.md`](DATA.md)
+
+**Built with Llama.** This adapter is a fine-tune of Llama-3.1-8B-Instruct and is governed by the [Llama 3.1 Community License](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct/blob/main/LICENSE).
 
 > This repo is a research write-up. `README.md` is the summary; [`docs/`](docs/)
 > holds the methodology, DPO derivation, and the full experimental journey;
@@ -229,12 +231,12 @@ notes are in [`promptfoo/README.md`](promptfoo/README.md).
 ### Trained adapter
 
 The LoRA adapter is on the Hugging Face Hub:
-**[`1rvinn/securelm`](https://huggingface.co/1rvinn/securelm)**.
+**[`1rvinn/llama-securelm`](https://huggingface.co/1rvinn/llama-securelm)**.
 Serve it on top of the base model (no merge needed):
 
 ```bash
 vllm serve meta-llama/Llama-3.1-8B-Instruct --served-model-name llama31-8b \
-  --enable-lora --lora-modules dpo=1rvinn/securelm --max-lora-rank 16
+  --enable-lora --lora-modules dpo=1rvinn/llama-securelm --max-lora-rank 16
 ```
 
 Or load it with PEFT:
@@ -243,7 +245,7 @@ Or load it with PEFT:
 from transformers import AutoModelForCausalLM
 from peft import PeftModel
 base = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-3.1-8B-Instruct")
-model = PeftModel.from_pretrained(base, "1rvinn/securelm")
+model = PeftModel.from_pretrained(base, "1rvinn/llama-securelm")
 ```
 
 It is also fully reproducible from the included data + `train_dpo.py` (step 5
