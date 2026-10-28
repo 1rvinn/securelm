@@ -39,6 +39,8 @@ temperature 0.3) so any difference is attributable to the DPO adapter, not sampl
 
 Gains are decisively above noise (n = 109–216 per category, 1,135 held-out attacks total).
 
+![Jailbreak attacks refused, base vs. DPO-tuned](assets/chart1_jailbreak_refusal.png)
+
 ### Over-refusal — % of benign prompts answered (higher is better)
 
 | Base | DPO-tuned | Δ |
@@ -48,6 +50,8 @@ Gains are decisively above noise (n = 109–216 per category, 1,135 held-out att
 The over-refusal cost is real and honestly reported. It is **concentrated** in the
 `weapons:ied` category (5/25 benign prompts refused, 20%) — the category that was
 trained hardest — with ≤8% in every other category. See [Limitations](#limitations).
+
+![Over-refusal trade-off](assets/chart2_tradeoff.png)
 
 Training run: bf16 LoRA, 1 epoch, ~19 min on one A100. Loss 0.69 → 0.27,
 `rewards/accuracies` 0.51 → 0.94, `rewards/margins` 0.001 → 2.80.
